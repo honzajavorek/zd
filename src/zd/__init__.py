@@ -18,7 +18,6 @@ LIMIT = 500
 FEED_LIMIT = 100
 REFRESH_AGE = timedelta(days=1)
 TZ = ZoneInfo("Europe/Prague")
-NAME_RE = re.compile(r"(?<![/.\w])zdopravy\.cz\b", re.IGNORECASE)
 
 KEEP_ATTRS = {"a": {"href"}, "img": {"src", "alt"}}
 DROP_SELECTORS = [
@@ -91,8 +90,6 @@ def main() -> None:
                     body = cache_path.read_text()
                 else:
                     cache_path.write_text(body)
-            body = brand(body)
-            item = {**item, "title": brand_text(item["title"]), "perex": brand_text(item["perex"])}
             write_article(slug, item, body)
             entries.append((slug, item, body))
 
@@ -153,19 +150,6 @@ def scrape_article(page: str) -> str:
 
     text = main.decode_contents()
     return re.sub(r"\n\s*\n+", "\n", text).strip()
-
-
-def brand_text(text: str) -> str:
-    return NAME_RE.sub("ZD", text)
-
-
-def brand(body: str) -> str:
-    soup = BeautifulSoup(body, "html.parser")
-    for el in soup.find_all(string=NAME_RE):
-        el.replace_with(brand_text(el))
-    for el in soup.find_all(alt=NAME_RE):
-        el["alt"] = brand_text(el["alt"])
-    return str(soup)
 
 
 def write_article(slug: str, item: dict, body: str) -> None:

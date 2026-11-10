@@ -18,6 +18,7 @@ LIMIT = 500
 FEED_LIMIT = 100
 REFRESH_AGE = timedelta(days=1)
 TZ = ZoneInfo("Europe/Prague")
+NAME_RE = re.compile(r"(?<![/.\w])zdopravy\.cz\b", re.IGNORECASE)
 
 KEEP_ATTRS = {"a": {"href"}, "img": {"src", "alt"}}
 DROP_SELECTORS = [
@@ -41,7 +42,7 @@ PAGE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>{title}</title>
-<link rel="alternate" type="application/rss+xml" title="Zdopravy.cz" href="feed.xml">
+<link rel="alternate" type="application/rss+xml" title="ZD" href="feed.xml">
 </head>
 <body>
 {body}
@@ -90,6 +91,8 @@ def main() -> None:
                     body = cache_path.read_text()
                 else:
                     cache_path.write_text(body)
+            body = brand(body)
+            item = {**item, "title": brand_text(item["title"]), "perex": brand_text(item["perex"])}
             write_article(slug, item, body)
             entries.append((slug, item, body))
 
@@ -152,6 +155,19 @@ def scrape_article(page: str) -> str:
     return re.sub(r"\n\s*\n+", "\n", text).strip()
 
 
+def brand_text(text: str) -> str:
+    return NAME_RE.sub("ZD", text)
+
+
+def brand(body: str) -> str:
+    soup = BeautifulSoup(body, "html.parser")
+    for el in soup.find_all(string=NAME_RE):
+        el.replace_with(brand_text(el))
+    for el in soup.find_all(alt=NAME_RE):
+        el["alt"] = brand_text(el["alt"])
+    return str(soup)
+
+
 def write_article(slug: str, item: dict, body: str) -> None:
     title = html.escape(item["title"])
     content = (
@@ -167,7 +183,7 @@ def write_article(slug: str, item: dict, body: str) -> None:
 
 def write_index(entries: list[tuple[str, dict, str]]) -> None:
     lines = [
-        "<h1>Zdopravy.cz</h1>",
+        "<h1>ZD</h1>",
         '<p><a href="feed.xml">RSS</a></p>',
         f"<p><small>Aktualizováno {datetime.now(TZ):%-d. %-m. %Y %H:%M}</small></p>",
         "<ul>",
@@ -179,7 +195,7 @@ def write_index(entries: list[tuple[str, dict, str]]) -> None:
         )
     lines.append("</ul>")
     (OUTPUT_DIR / "index.html").write_text(
-        PAGE.format(title="Zdopravy.cz", body="\n".join(lines))
+        PAGE.format(title="ZD", body="\n".join(lines))
     )
 
 
@@ -188,9 +204,9 @@ def write_feed(entries: list[tuple[str, dict, str]]) -> None:
     ET.register_namespace("content", content_ns)
     rss = ET.Element("rss", version="2.0")
     channel = ET.SubElement(rss, "channel")
-    ET.SubElement(channel, "title").text = "Zdopravy.cz"
+    ET.SubElement(channel, "title").text = "ZD"
     ET.SubElement(channel, "link").text = SITE_URL
-    ET.SubElement(channel, "description").text = "Zdopravy.cz bez reklam"
+    ET.SubElement(channel, "description").text = "ZD bez reklam"
     ET.SubElement(channel, "language").text = "cs"
     ET.SubElement(channel, "lastBuildDate").text = format_datetime(datetime.now(TZ))
     for slug, item, body in entries:

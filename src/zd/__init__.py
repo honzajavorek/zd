@@ -196,12 +196,12 @@ def write_feed(entries: list[tuple[str, dict, str]]) -> None:
     for slug, item, body in entries:
         el = ET.SubElement(channel, "item")
         ET.SubElement(el, "title").text = item["title"]
-        ET.SubElement(el, "link").text = f"{SITE_URL}{slug}.html"
+        ET.SubElement(el, "link").text = item["url"]
         ET.SubElement(el, "guid", isPermaLink="false").text = item["url"]
         ET.SubElement(el, "pubDate").text = format_datetime(item["date"])
         ET.SubElement(el, "description").text = item["perex"]
         ET.SubElement(el, f"{{{content_ns}}}encoded").text = (
-            f'{body}\n<p><a href="{html.escape(item["url"])}">originál</a></p>'
+            f'<p><a href="{SITE_URL}{slug}.html">Bez reklam</a></p>\n<hr>\n{body}'
         )
     ET.ElementTree(rss).write(
         OUTPUT_DIR / "feed.xml", encoding="utf-8", xml_declaration=True

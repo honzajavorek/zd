@@ -5,7 +5,7 @@ description = "Ad-free plain HTML mirror of latest zdopravy.cz articles"
 authors = [
     { name = "Honza Javorek", email = "mail@honzajavorek.cz" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.15"
 dependencies = [
     "beautifulsoup4>=4.15.0",
     "httpx>=0.28.1",

@@ -18,6 +18,7 @@ LIMIT = 500
 FEED_LIMIT = 100
 REFRESH_AGE = timedelta(days=1)
 TZ = ZoneInfo("Europe/Prague")
+ICON_URL = "https://zdopravy.cz/wp-content/uploads/2017/10/cropped-ZDopravy-logo-16_500px-{size}.png"
 
 KEEP_ATTRS = {"a": {"href"}, "img": {"src", "alt"}}
 DROP_SELECTORS = [
@@ -42,12 +43,20 @@ PAGE = """<!DOCTYPE html>
 <meta name="robots" content="noindex">
 <title>{title}</title>
 <link rel="alternate" type="application/rss+xml" title="ZD" href="feed.xml">
+<link rel="icon" href="{icon32}" sizes="32x32">
+<link rel="icon" href="{icon192}" sizes="192x192">
+<link rel="apple-touch-icon" href="{icon180}">
 </head>
 <body>
 {body}
 </body>
 </html>
 """
+
+
+def page(**kwargs) -> str:
+    icons = {f"icon{n}": ICON_URL.format(size=f"{n}x{n}") for n in (32, 180, 192)}
+    return PAGE.format(**icons, **kwargs)
 
 
 def main() -> None:
@@ -162,7 +171,7 @@ def write_article(slug: str, item: dict, body: str) -> None:
         f"{body}\n"
         f'<p><a href="index.html">← zpět</a></p>'
     )
-    (OUTPUT_DIR / f"{slug}.html").write_text(PAGE.format(title=title, body=content))
+    (OUTPUT_DIR / f"{slug}.html").write_text(page(title=title, body=content))
 
 
 def write_index(entries: list[tuple[str, dict, str]]) -> None:
@@ -179,7 +188,7 @@ def write_index(entries: list[tuple[str, dict, str]]) -> None:
         )
     lines.append("</ul>")
     (OUTPUT_DIR / "index.html").write_text(
-        PAGE.format(title="ZD", body="\n".join(lines))
+        page(title="ZD", body="\n".join(lines))
     )
 
 
@@ -192,6 +201,10 @@ def write_feed(entries: list[tuple[str, dict, str]]) -> None:
     ET.SubElement(channel, "link").text = SITE_URL
     ET.SubElement(channel, "description").text = "ZD bez reklam"
     ET.SubElement(channel, "language").text = "cs"
+    image = ET.SubElement(channel, "image")
+    ET.SubElement(image, "url").text = ICON_URL.format(size="192x192")
+    ET.SubElement(image, "title").text = "ZD"
+    ET.SubElement(image, "link").text = SITE_URL
     ET.SubElement(channel, "lastBuildDate").text = format_datetime(datetime.now(TZ))
     for slug, item, body in entries:
         el = ET.SubElement(channel, "item")
